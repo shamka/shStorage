@@ -404,17 +404,10 @@ namespace shamkaLEupdater
             cert.childs[2].payload = makeSign(key,cert.childs[0].makeDer());
             return cert.makeDer();
         }
-        static public string dataTo64(byte[] data,string open,string close, bool le) {
+        static public string dataTo64(byte[] data,string open,string close) {
             StringBuilder str = new StringBuilder();
             str.Append(open + "\n");
-            string flat = null;
-            if (le)
-            {
-                flat = Convert.ToBase64String(data).TrimEnd('=').Replace('+', '-').Replace('/', '_');
-            }
-            else {
-                flat = Convert.ToBase64String(data);
-            }
+            string flat = Convert.ToBase64String(data);
             int i = 0;
             for (i = 0; i < flat.Length - 64; i += 64)
             {
@@ -424,8 +417,8 @@ namespace shamkaLEupdater
             str.Append(close + "\n");
             return str.ToString();
         }
-        static public string dataTo64(byte[] data, string block, bool le) {
-            return dataTo64(data, "-----BEGIN " + block + "-----", "-----END " + block + "-----", le);
+        static public string dataTo64(byte[] data, string block) {
+            return dataTo64(data, "-----BEGIN " + block + "-----", "-----END " + block + "-----");
         }
         static public byte[] makeCSR(keyInfo key, string def, DomainInfo dom, System.ComponentModel.BackgroundWorker worker) {
             worker.ReportProgress(101, new object[] { -3, "Pattern parse.." });

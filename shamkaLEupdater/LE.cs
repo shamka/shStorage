@@ -20,7 +20,7 @@ namespace shamkaLEupdater
         private string json_jwk;
         public static readonly string pdf= "https://letsencrypt.org/documents/LE-SA-v1.1.1-August-1-2016.pdf";
         private string thumbprint;
-        private string _csr;
+        private byte[] _csr;
         private keyInfo _key;
         public int code;
         public string details;
@@ -68,7 +68,7 @@ namespace shamkaLEupdater
             thumbprint = null;
             me = null;
         }
-        public string csr {
+        public byte[] csr {
             get { return _csr; }
             set { _csr=value; }
         }

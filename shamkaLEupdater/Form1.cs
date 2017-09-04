@@ -923,7 +923,7 @@ namespace shamkaLEupdater
             if (saveFileDialog1.ShowDialog() == DialogResult.OK)
             {
                 StreamWriter writer = new StreamWriter(saveFileDialog1.OpenFile());
-                writer.Write(utils.dataTo64(State.session.keys[State.selectKeyName].key.makeDer(), "RSA PRIVATE KEY", false));
+                writer.Write(utils.dataTo64(State.session.keys[State.selectKeyName].key.makeDer(), "RSA PRIVATE KEY"));
                 writer.Dispose();
                 writer.Close();
             }
@@ -939,7 +939,7 @@ namespace shamkaLEupdater
             if (saveFileDialog1.ShowDialog() == DialogResult.OK)
             {
                 StreamWriter writer = new StreamWriter(saveFileDialog1.OpenFile());
-                writer.Write(utils.dataTo64(State.session.certs[State.selectCertName].cert.makeDer(), "CERTIFICATE", false));
+                writer.Write(utils.dataTo64(State.session.certs[State.selectCertName].cert.makeDer(), "CERTIFICATE"));
                 writer.Dispose();
                 writer.Close();
             }
@@ -955,7 +955,7 @@ namespace shamkaLEupdater
             if (saveFileDialog1.ShowDialog() == DialogResult.OK)
             {
                 StreamWriter writer = new StreamWriter(saveFileDialog1.OpenFile());
-                writer.Write(utils.dataTo64(State.session.certs[State.selectCertName].cert.makeDer(), "CERTIFICATE", false));
+                writer.Write(utils.dataTo64(State.session.certs[State.selectCertName].cert.makeDer(), "CERTIFICATE"));
 
                 if (State.session.certs[State.selectCertName].CN != State.session.certs[State.selectCertName].iCN) {
                     certInfo current = State.session.certs[State.selectCertName];
@@ -964,7 +964,7 @@ namespace shamkaLEupdater
                         if (cert.Value.CN != current.iCN) continue;
                         current = cert.Value;
                         if (current.CN == current.iCN) break;
-                        writer.Write(utils.dataTo64(current.cert.makeDer(), "CERTIFICATE", false));
+                        writer.Write(utils.dataTo64(current.cert.makeDer(), "CERTIFICATE"));
                         goto Looper1;
                     }
                 }
@@ -984,7 +984,7 @@ namespace shamkaLEupdater
             if (saveFileDialog1.ShowDialog() == DialogResult.OK)
             {
                 StreamWriter writer = new StreamWriter(saveFileDialog1.OpenFile());
-                writer.Write(utils.dataTo64(utils.makeRootCertFromPriv(State.selectKeyName), "CERTIFICATE", false));
+                writer.Write(utils.dataTo64(utils.makeRootCertFromPriv(State.selectKeyName), "CERTIFICATE"));
                 writer.Dispose();
                 writer.Close();
             }
@@ -1037,7 +1037,7 @@ namespace shamkaLEupdater
                         e.Result = new object[] { 0, LE.makeReq((string)args[1], args[2], le_backgr, false) };
                         break;
                     case 1:
-                        State.le.csr = Convert.ToBase64String(utils.makeCSR(State.session.keys[(string)args[1]], (string)args[2], State.session.domains[(string)args[3]], le_backgr)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+                        State.le.csr = utils.makeCSR(State.session.keys[(string)args[1]], (string)args[2], State.session.domains[(string)args[3]], le_backgr);
                         le_backgr.ReportProgress(101, new object[] { -2, "OK" });
                         e.Result = new object[] { 1 };
                         break;
@@ -1147,7 +1147,7 @@ namespace shamkaLEupdater
                         string met_3 = "new-cert";
                         Dictionary<string, object> data_3 = new Dictionary<string, object>();
                         data_3.Add("resource", met_3);
-                        data_3.Add("csr", State.le.csr);
+                        data_3.Add("csr", Convert.ToBase64String(State.le.csr).TrimEnd('=').Replace('+', '-').Replace('/', '_'));
                         byte[] ans_3 = (byte[])LE.makeReq(met_3, data_3, le_backgr, true);
                         if (ans_3 != null)
                         {
@@ -1192,7 +1192,8 @@ namespace shamkaLEupdater
                 case 0:
                     break;
                 case 1:
-                    le_log.AppendText("CSR updated!\r\n");
+                    le_log.AppendText("CSR updated and copy to clipcboard!\r\n");
+                    Clipboard.SetText(utils.dataTo64(State.le.csr, "CERTIFICATE REQUEST"));
                     break;
                 case 2:
                     le_log.AppendText("Domains test Copmpleted\r\n");
