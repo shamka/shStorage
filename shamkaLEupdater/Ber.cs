@@ -62,6 +62,10 @@ namespace Libraries
         {
             get { return _childs; }
         }
+        public List<Ber> c
+        {
+            get { return _childs; }
+        }
 
         public Ber getParrent()
         {
@@ -210,7 +214,9 @@ namespace Libraries
                     payload = child.makeDer();
                 }
             }
-            if (_parrent != null) _parrent._payload = null;
+            else {
+                this.payload = null;
+            }
             return child;
         }
         public bool delChild(Ber child)
@@ -222,12 +228,14 @@ namespace Libraries
             _childs.Remove(child);
             child.Dispose();
             child = null;
+            if (_parrent != null) _parrent.payload = null;
             return true;
         }
         public bool delAllChild()
         {
             if (!container) return false;
             container = true;
+            if (_parrent != null) _parrent.payload = null;
             return true;
         }
         public byte[] payload { 
@@ -236,6 +244,7 @@ namespace Libraries
                 return _payload;
             }
             set {
+                if (_parrent != null) _parrent.payload = null;
                 if (value == null)
                 {
                     _payload = null;
@@ -245,7 +254,7 @@ namespace Libraries
                 if (_container) return;
                 _payload = value;
                 _payloadLength = (_payload == null) ? 0 : value.Length;
-                if (_parrent != null) _parrent.payload = null;
+                
             }
         }
         public int payloadLength { 

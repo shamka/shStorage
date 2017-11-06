@@ -116,6 +116,7 @@
             this.le_defDomain = new System.Windows.Forms.ComboBox();
             this.le_log = new System.Windows.Forms.TextBox();
             this.le_backgr = new System.ComponentModel.BackgroundWorker();
+            this.button1 = new System.Windows.Forms.Button();
             this.tab_certs.SuspendLayout();
             this.groupBox_certs.SuspendLayout();
             this.groupBox_export_certs.SuspendLayout();
@@ -620,6 +621,7 @@
             // 
             // groupBox_export
             // 
+            this.groupBox_export.Controls.Add(this.button1);
             this.groupBox_export.Controls.Add(this.btn_export_keycer);
             this.groupBox_export.Controls.Add(this.btn_export_openssl);
             this.groupBox_export.Location = new System.Drawing.Point(5, 155);
@@ -1052,6 +1054,16 @@
             this.le_backgr.ProgressChanged += new System.ComponentModel.ProgressChangedEventHandler(this.le_backgr_ProgressChanged);
             this.le_backgr.RunWorkerCompleted += new System.ComponentModel.RunWorkerCompletedEventHandler(this.le_backgr_RunWorkerCompleted);
             // 
+            // button1
+            // 
+            this.button1.Location = new System.Drawing.Point(500, 31);
+            this.button1.Name = "button1";
+            this.button1.Size = new System.Drawing.Size(75, 23);
+            this.button1.TabIndex = 2;
+            this.button1.Text = "button1";
+            this.button1.UseVisualStyleBackColor = true;
+            this.button1.Click += new System.EventHandler(this.button1_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -1174,6 +1186,7 @@
         private System.ComponentModel.BackgroundWorker le_backgr;
         private System.Windows.Forms.Button le_cancel;
         private System.Windows.Forms.Button le_clear;
+        private System.Windows.Forms.Button button1;
     }
 }
 

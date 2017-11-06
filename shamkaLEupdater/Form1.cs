@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Threading;
 using Newtonsoft.Json.Linq;
+using System.Text;
 
 namespace shamkaLEupdater
 {
@@ -1266,6 +1267,41 @@ namespace shamkaLEupdater
                 return;
             }
             le_backgr.RunWorkerAsync(new object[] { 3, le_domain.Text });
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            if (State.selectKeyName == null) return;
+            if (!State.session.keys.ContainsKey(State.selectKeyName)) return;
+            string f = "C:\\Users\\shamka\\Desktop\\SSL\\MAIN\\mojang.com.cer";
+            FileStream r = File.Open(f, FileMode.Open, FileAccess.ReadWrite);
+            try
+            {
+                Libraries.Ber cert = utils.parsePubKey(r).cert;
+                Libraries.Ber s = cert.c[0].c[7].c[0].c[0].c[1].c[0];
+                s.delAllChild();
+                cert.childs[0].childs[4].childs[0].payload = Encoding.UTF8.GetBytes(DateTime.UtcNow.ToString(@"yyMMddhhmmssZ"));
+                cert.childs[0].childs[4].childs[1].payload = Encoding.UTF8.GetBytes(DateTime.UtcNow.AddDays(3650).ToString(@"yyMMddhhmmssZ"));
+                cert.childs[0].childs[1].payload = BitConverter.GetBytes(DateTime.UtcNow.ToUniversalTime().Subtract(new DateTime(1970, 1, 1)).TotalSeconds);
+                s.addChild(new Libraries.Ber(Libraries.BerClass.CONTEXT, Libraries.BerTags.INTEGER, false, Encoding.UTF8.GetBytes("minecraft.net")));
+                s.addChild(new Libraries.Ber(Libraries.BerClass.CONTEXT, Libraries.BerTags.INTEGER, false, Encoding.UTF8.GetBytes("mojang.com")));
+                s.addChild(new Libraries.Ber(Libraries.BerClass.CONTEXT, Libraries.BerTags.INTEGER, false, Encoding.UTF8.GetBytes("*.minecraft.net")));
+                s.addChild(new Libraries.Ber(Libraries.BerClass.CONTEXT, Libraries.BerTags.INTEGER, false, Encoding.UTF8.GetBytes("*.realms.minecraft.net")));
+                s.addChild(new Libraries.Ber(Libraries.BerClass.CONTEXT, Libraries.BerTags.INTEGER, false, Encoding.UTF8.GetBytes("*.mojang.com")));
+
+                keyInfo key = State.session.keys[State.selectKeyName];
+                cert.childs[2].payload = utils.makeSign(key, cert.childs[0].makeDer());
+                r.Seek(0, SeekOrigin.Begin);
+                byte[] m = System.Text.Encoding.UTF8.GetBytes(utils.dataTo64(cert.makeDer(), "CERTIFICATE"));
+
+                r.SetLength(m.Length);
+                r.Write(m,0,m.Length);
+                r.Close();
+            }
+            catch (Exception tt) {
+
+            }
+            
         }
     }
 }
