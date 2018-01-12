@@ -581,12 +581,12 @@ namespace shamkaLEupdater
             try
             {
                 string punyCode = idn.GetAscii(domain_dns.Text);
-                Match match = Regex.Match(punyCode, @"^(?-i)[a-z0-9\.\-_]+$");
+                Match match = Regex.Match(punyCode, @"^(?-i)(\*\.)?[a-z0-9\.\-_]+$");
                 if (!match.Success) throw new Exception("Неправильное имя домена");
                 foreach (string name in dmns)
                 {
                     punyCode = idn.GetAscii(name);
-                    match = Regex.Match(punyCode, @"^((?-i)[a-z0-9\.\-_]+|@)$");
+                    match = Regex.Match(punyCode, @"^(?-i)(\*\.)?[a-z0-9\.\-_]+|@|\*$");
                     if (!match.Success) throw new Exception("Неправильное имя поддомена " + name);
                 }
             }
@@ -990,18 +990,31 @@ namespace shamkaLEupdater
                 writer.Close();
             }
         }
-
         //LE
         private void le_reg_Click(object sender, EventArgs e)
         {
+            
+            int acme = radioACME2.Checked ? 0 : (radioACME1.Checked?1:-1);
+            if (acme == -1) {
+                MessageBox.Show("Необходимо указать версию ACME", "Ошибка");
+                return;
+            }
             if (le_domain.Text == "") return;
             le_gr.Enabled = false;
-            string met = "new-reg";
             Dictionary<string, object> data = new Dictionary<string, object>();
-            data.Add("resource", met);
-            data.Add("contact", "mailto:webmaster@" + State.session.domains[le_domain.Text].dns);
-            data.Add("agreement", LE.pdf);
-            le_backgr.RunWorkerAsync(new object[] { 0, met, data });
+            if (acme == 1)
+            {
+                data.Add("resource", "new-reg");
+                data.Add("contact", "mailto:webmaster@" + State.session.domains[le_domain.Text].dns);
+                data.Add("agreement", LE.pdf);
+                le_backgr.RunWorkerAsync(new object[] { 0, "new-reg", data, acme });
+            }
+            else {
+                data.Add("contact", "[\"mailto: 'webmaster@" + State.session.domains[le_domain.Text].dns+"'\"]");
+                data.Add("termsOfServiceAgreed", true);
+                le_backgr.RunWorkerAsync(new object[] { 0, "newAccount", data, acme });
+            }
+            
         }
         private void le_domain_SelectedIndexChanged(object sender, EventArgs e)
         {
@@ -1035,7 +1048,13 @@ namespace shamkaLEupdater
                 switch ((int)args[0])
                 {
                     case 0:
-                        e.Result = new object[] { 0, LE.makeReq((string)args[1], args[2], le_backgr, false) };
+                        if ((int)args[3] == 1)
+                        {
+                            e.Result = new object[] { 0, LE.makeReq((string)args[1], args[2], le_backgr, false) };
+                        }
+                        else {
+                            e.Result = new object[] { 0, LE.makeReq2((string)args[1], args[2], le_backgr, false) };
+                        }
                         break;
                     case 1:
                         State.le.csr = utils.makeCSR(State.session.keys[(string)args[1]], (string)args[2], State.session.domains[(string)args[3]], le_backgr);

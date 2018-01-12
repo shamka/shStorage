@@ -75,6 +75,7 @@
             this.tab_keys = new System.Windows.Forms.TabPage();
             this.groupBox_keys = new System.Windows.Forms.GroupBox();
             this.groupBox_export = new System.Windows.Forms.GroupBox();
+            this.button1 = new System.Windows.Forms.Button();
             this.btn_export_keycer = new System.Windows.Forms.Button();
             this.btn_export_openssl = new System.Windows.Forms.Button();
             this.keyLength = new System.Windows.Forms.TextBox();
@@ -116,7 +117,8 @@
             this.le_defDomain = new System.Windows.Forms.ComboBox();
             this.le_log = new System.Windows.Forms.TextBox();
             this.le_backgr = new System.ComponentModel.BackgroundWorker();
-            this.button1 = new System.Windows.Forms.Button();
+            this.radioACME1 = new System.Windows.Forms.RadioButton();
+            this.radioACME2 = new System.Windows.Forms.RadioButton();
             this.tab_certs.SuspendLayout();
             this.groupBox_certs.SuspendLayout();
             this.groupBox_export_certs.SuspendLayout();
@@ -631,6 +633,16 @@
             this.groupBox_export.TabStop = false;
             this.groupBox_export.Text = "Экспортирование";
             // 
+            // button1
+            // 
+            this.button1.Location = new System.Drawing.Point(500, 31);
+            this.button1.Name = "button1";
+            this.button1.Size = new System.Drawing.Size(75, 23);
+            this.button1.TabIndex = 2;
+            this.button1.Text = "button1";
+            this.button1.UseVisualStyleBackColor = true;
+            this.button1.Click += new System.EventHandler(this.button1_Click);
+            // 
             // btn_export_keycer
             // 
             this.btn_export_keycer.Location = new System.Drawing.Point(90, 19);
@@ -883,6 +895,8 @@
             // 
             // le_gr
             // 
+            this.le_gr.Controls.Add(this.radioACME2);
+            this.le_gr.Controls.Add(this.radioACME1);
             this.le_gr.Controls.Add(this.le_privKey);
             this.le_gr.Controls.Add(this.le_server);
             this.le_gr.Controls.Add(this.label14);
@@ -899,7 +913,7 @@
             this.le_gr.Controls.Add(this.le_defDomain);
             this.le_gr.Location = new System.Drawing.Point(0, 3);
             this.le_gr.Name = "le_gr";
-            this.le_gr.Size = new System.Drawing.Size(423, 136);
+            this.le_gr.Size = new System.Drawing.Size(513, 136);
             this.le_gr.TabIndex = 16;
             this.le_gr.TabStop = false;
             // 
@@ -1054,15 +1068,25 @@
             this.le_backgr.ProgressChanged += new System.ComponentModel.ProgressChangedEventHandler(this.le_backgr_ProgressChanged);
             this.le_backgr.RunWorkerCompleted += new System.ComponentModel.RunWorkerCompletedEventHandler(this.le_backgr_RunWorkerCompleted);
             // 
-            // button1
+            // radioACME1
             // 
-            this.button1.Location = new System.Drawing.Point(500, 31);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(75, 23);
-            this.button1.TabIndex = 2;
-            this.button1.Text = "button1";
-            this.button1.UseVisualStyleBackColor = true;
-            this.button1.Click += new System.EventHandler(this.button1_Click);
+            this.radioACME1.AutoSize = true;
+            this.radioACME1.Location = new System.Drawing.Point(381, 8);
+            this.radioACME1.Name = "radioACME1";
+            this.radioACME1.Size = new System.Drawing.Size(67, 17);
+            this.radioACME1.TabIndex = 16;
+            this.radioACME1.Text = "ACMEv1";
+            this.radioACME1.UseVisualStyleBackColor = true;
+            // 
+            // radioACME2
+            // 
+            this.radioACME2.AutoSize = true;
+            this.radioACME2.Location = new System.Drawing.Point(381, 32);
+            this.radioACME2.Name = "radioACME2";
+            this.radioACME2.Size = new System.Drawing.Size(67, 17);
+            this.radioACME2.TabIndex = 17;
+            this.radioACME2.Text = "ACMEv2";
+            this.radioACME2.UseVisualStyleBackColor = true;
             // 
             // Form1
             // 
@@ -1187,6 +1211,8 @@
         private System.Windows.Forms.Button le_cancel;
         private System.Windows.Forms.Button le_clear;
         private System.Windows.Forms.Button button1;
+        private System.Windows.Forms.RadioButton radioACME2;
+        private System.Windows.Forms.RadioButton radioACME1;
     }
 }
 
