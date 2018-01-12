@@ -75,6 +75,7 @@
             this.tab_keys = new System.Windows.Forms.TabPage();
             this.groupBox_keys = new System.Windows.Forms.GroupBox();
             this.groupBox_export = new System.Windows.Forms.GroupBox();
+            this.button1 = new System.Windows.Forms.Button();
             this.btn_export_keycer = new System.Windows.Forms.Button();
             this.btn_export_openssl = new System.Windows.Forms.Button();
             this.keyLength = new System.Windows.Forms.TextBox();
@@ -116,7 +117,7 @@
             this.le_defDomain = new System.Windows.Forms.ComboBox();
             this.le_log = new System.Windows.Forms.TextBox();
             this.le_backgr = new System.ComponentModel.BackgroundWorker();
-            this.button1 = new System.Windows.Forms.Button();
+            this.tExpired = new System.Windows.Forms.TextBox();
             this.tab_certs.SuspendLayout();
             this.groupBox_certs.SuspendLayout();
             this.groupBox_export_certs.SuspendLayout();
@@ -144,6 +145,7 @@
             // 
             // groupBox_certs
             // 
+            this.groupBox_certs.Controls.Add(this.tExpired);
             this.groupBox_certs.Controls.Add(this.certs_cns);
             this.groupBox_certs.Controls.Add(this.certs_finger);
             this.groupBox_certs.Controls.Add(this.label15);
@@ -170,7 +172,7 @@
             this.certs_cns.Location = new System.Drawing.Point(222, 104);
             this.certs_cns.Name = "certs_cns";
             this.certs_cns.ReadOnly = true;
-            this.certs_cns.Size = new System.Drawing.Size(398, 20);
+            this.certs_cns.Size = new System.Drawing.Size(400, 20);
             this.certs_cns.TabIndex = 13;
             // 
             // certs_finger
@@ -178,7 +180,7 @@
             this.certs_finger.Location = new System.Drawing.Point(116, 158);
             this.certs_finger.Name = "certs_finger";
             this.certs_finger.ReadOnly = true;
-            this.certs_finger.Size = new System.Drawing.Size(360, 20);
+            this.certs_finger.Size = new System.Drawing.Size(323, 20);
             this.certs_finger.TabIndex = 12;
             // 
             // label15
@@ -234,7 +236,7 @@
             this.certs_pin.Location = new System.Drawing.Point(116, 129);
             this.certs_pin.Name = "certs_pin";
             this.certs_pin.ReadOnly = true;
-            this.certs_pin.Size = new System.Drawing.Size(360, 20);
+            this.certs_pin.Size = new System.Drawing.Size(323, 20);
             this.certs_pin.TabIndex = 7;
             // 
             // label11
@@ -630,6 +632,16 @@
             this.groupBox_export.TabIndex = 8;
             this.groupBox_export.TabStop = false;
             this.groupBox_export.Text = "Экспортирование";
+            // 
+            // button1
+            // 
+            this.button1.Location = new System.Drawing.Point(500, 31);
+            this.button1.Name = "button1";
+            this.button1.Size = new System.Drawing.Size(75, 23);
+            this.button1.TabIndex = 2;
+            this.button1.Text = "button1";
+            this.button1.UseVisualStyleBackColor = true;
+            this.button1.Click += new System.EventHandler(this.button1_Click);
             // 
             // btn_export_keycer
             // 
@@ -1054,15 +1066,13 @@
             this.le_backgr.ProgressChanged += new System.ComponentModel.ProgressChangedEventHandler(this.le_backgr_ProgressChanged);
             this.le_backgr.RunWorkerCompleted += new System.ComponentModel.RunWorkerCompletedEventHandler(this.le_backgr_RunWorkerCompleted);
             // 
-            // button1
+            // tExpired
             // 
-            this.button1.Location = new System.Drawing.Point(500, 31);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(75, 23);
-            this.button1.TabIndex = 2;
-            this.button1.Text = "button1";
-            this.button1.UseVisualStyleBackColor = true;
-            this.button1.Click += new System.EventHandler(this.button1_Click);
+            this.tExpired.Location = new System.Drawing.Point(445, 129);
+            this.tExpired.Name = "tExpired";
+            this.tExpired.ReadOnly = true;
+            this.tExpired.Size = new System.Drawing.Size(177, 20);
+            this.tExpired.TabIndex = 14;
             // 
             // Form1
             // 
@@ -1187,6 +1197,7 @@
         private System.Windows.Forms.Button le_cancel;
         private System.Windows.Forms.Button le_clear;
         private System.Windows.Forms.Button button1;
+        private System.Windows.Forms.TextBox tExpired;
     }
 }
 
