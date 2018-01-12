@@ -117,7 +117,12 @@
             this.le_defDomain = new System.Windows.Forms.ComboBox();
             this.le_log = new System.Windows.Forms.TextBox();
             this.le_backgr = new System.ComponentModel.BackgroundWorker();
+<<<<<<< HEAD
             this.tExpired = new System.Windows.Forms.TextBox();
+=======
+            this.radioACME1 = new System.Windows.Forms.RadioButton();
+            this.radioACME2 = new System.Windows.Forms.RadioButton();
+>>>>>>> 0d072d3f07c60b1ffbf546050c4cb2741e440908
             this.tab_certs.SuspendLayout();
             this.groupBox_certs.SuspendLayout();
             this.groupBox_export_certs.SuspendLayout();
@@ -895,6 +900,8 @@
             // 
             // le_gr
             // 
+            this.le_gr.Controls.Add(this.radioACME2);
+            this.le_gr.Controls.Add(this.radioACME1);
             this.le_gr.Controls.Add(this.le_privKey);
             this.le_gr.Controls.Add(this.le_server);
             this.le_gr.Controls.Add(this.label14);
@@ -911,7 +918,7 @@
             this.le_gr.Controls.Add(this.le_defDomain);
             this.le_gr.Location = new System.Drawing.Point(0, 3);
             this.le_gr.Name = "le_gr";
-            this.le_gr.Size = new System.Drawing.Size(423, 136);
+            this.le_gr.Size = new System.Drawing.Size(513, 136);
             this.le_gr.TabIndex = 16;
             this.le_gr.TabStop = false;
             // 
@@ -1066,6 +1073,7 @@
             this.le_backgr.ProgressChanged += new System.ComponentModel.ProgressChangedEventHandler(this.le_backgr_ProgressChanged);
             this.le_backgr.RunWorkerCompleted += new System.ComponentModel.RunWorkerCompletedEventHandler(this.le_backgr_RunWorkerCompleted);
             // 
+<<<<<<< HEAD
             // tExpired
             // 
             this.tExpired.Location = new System.Drawing.Point(445, 129);
@@ -1073,6 +1081,27 @@
             this.tExpired.ReadOnly = true;
             this.tExpired.Size = new System.Drawing.Size(177, 20);
             this.tExpired.TabIndex = 14;
+=======
+            // radioACME1
+            // 
+            this.radioACME1.AutoSize = true;
+            this.radioACME1.Location = new System.Drawing.Point(381, 8);
+            this.radioACME1.Name = "radioACME1";
+            this.radioACME1.Size = new System.Drawing.Size(67, 17);
+            this.radioACME1.TabIndex = 16;
+            this.radioACME1.Text = "ACMEv1";
+            this.radioACME1.UseVisualStyleBackColor = true;
+            // 
+            // radioACME2
+            // 
+            this.radioACME2.AutoSize = true;
+            this.radioACME2.Location = new System.Drawing.Point(381, 32);
+            this.radioACME2.Name = "radioACME2";
+            this.radioACME2.Size = new System.Drawing.Size(67, 17);
+            this.radioACME2.TabIndex = 17;
+            this.radioACME2.Text = "ACMEv2";
+            this.radioACME2.UseVisualStyleBackColor = true;
+>>>>>>> 0d072d3f07c60b1ffbf546050c4cb2741e440908
             // 
             // Form1
             // 
@@ -1197,7 +1226,12 @@
         private System.Windows.Forms.Button le_cancel;
         private System.Windows.Forms.Button le_clear;
         private System.Windows.Forms.Button button1;
+<<<<<<< HEAD
         private System.Windows.Forms.TextBox tExpired;
+=======
+        private System.Windows.Forms.RadioButton radioACME2;
+        private System.Windows.Forms.RadioButton radioACME1;
+>>>>>>> 0d072d3f07c60b1ffbf546050c4cb2741e440908
     }
 }
 
