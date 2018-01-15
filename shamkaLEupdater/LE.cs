@@ -183,7 +183,7 @@ namespace shamkaLEupdater
 
             return API;
         }
-        static private object POST(string url, object data, bool isRaw)
+        static public object POST(string url, object data, bool isRaw)
         {
             me.lastLocation = null;
             me.code = 0;

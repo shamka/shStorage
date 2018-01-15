@@ -1111,6 +1111,7 @@ namespace shamkaLEupdater
                             JObject order = (JObject)LE.makeReq2("newOrder", payload, le_backgr, false);
                             JToken ident = order.GetValue("identifiers").First;
                             JToken authz = order.GetValue("authorizations").First;
+                            string finalize = order.Value<string>("finalize");
                             while (authz != null && ident != null) {
                                 i++;
                                 le_backgr.ReportProgress(101, new object[] { -3, String.Format("{0:d}/{2:d} [ {1:s} ] testName..", i, ident.Value<String>("value"), dms.Length) });
@@ -1151,13 +1152,13 @@ namespace shamkaLEupdater
                                 }
                                 string statusForTest = challenge.Value<string>("status");
                                 le_backgr.ReportProgress(101, new object[] { -3, "wait.." });
-                                if (statusForTest == "pending" || statusForTest=="invalid")
+                                if (statusForTest == "pending" || statusForTest == "invalid")
                                 {
                                     string token = challenge.Value<string>("token");
                                     string keyauthorization = token + "." + LE.getThumbprint();
                                     string uriToTest = challenge.Value<string>("url");
                                     string txtdomain = "_acme-challenge."+ domain_;
-                                    string txt = Convert.ToBase64String(utils.makeSign(LE.ME.getUserKey(), Encoding.UTF8.GetBytes(keyauthorization))).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+                                    string txt = Convert.ToBase64String(System.Security.Cryptography.SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(keyauthorization))).TrimEnd('=').Replace('+', '-').Replace('/', '_');
                                     Dictionary<string, string> reqToServ = new Dictionary<string, string>();
                                     reqToServ.Add("m", "addDNS");
                                     reqToServ.Add("domain", txtdomain);
@@ -1193,6 +1194,11 @@ namespace shamkaLEupdater
                                         le_backgr.ReportProgress(101, new object[] { -2, "ERROR. Serv bad answer" });
                                         break;
                                     }
+                                }
+                                else if (statusForTest == "invalid")
+                                {
+                                    JObject order5 = (JObject)LE.makeReq2(finalize, "{}", le_backgr, false);
+                                    le_backgr.ReportProgress(101, new object[] { -2, "OK" });
                                 }
                                 else if (statusForTest == "valid") {
                                     le_backgr.ReportProgress(101, new object[] { -2, "OK" });
