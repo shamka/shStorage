@@ -19,16 +19,18 @@ namespace shamkaLEupdater
         private string n;
         private string json_jwk_raw;
         private string json_jwk;
+        private string thumbprint;
+        public string lastLocation;
+        public string profLocation;
 
         private static readonly string JWK_HEADERPLACE_PART1 = "{\"nonce\": \"";
-        private static readonly string JWK_HEADERPLACE_PART2 = "\"alg\": \"RS256\"";//
+        private static readonly string JWK_HEADERPLACE_PART2 = "\", \"alg\": \"RS256\"";//
 
         public static readonly string pdf = "https://letsencrypt.org/documents/LE-SA-v1.1.1-August-1-2016.pdf";
         public static readonly string pdf2 = "https://letsencrypt.org/documents/LE-SA-v1.2-November-15-2017.pdf";
         public static readonly string acme1 = "https://acme-v01.api.letsencrypt.org/directory";
         public static readonly string acme2 = "https://acme-staging-v02.api.letsencrypt.org/directory";
         public static Dictionary<string, string> acme1to2;
-        private string thumbprint;
         private byte[] _csr;
         private keyInfo _key;
         public int code;
@@ -45,6 +47,9 @@ namespace shamkaLEupdater
         public static LE ME
         {
             get { return me; }
+        }
+        public static string getThumbprint() {
+            return me.thumbprint;
         }
         public static string th
         {
@@ -100,17 +105,24 @@ namespace shamkaLEupdater
                 return null;
             }
             JObject API = (JObject)GET(acme2 + "?cachebuster=" + utils.getHex(MD5.Create().ComputeHash(BitConverter.GetBytes(DateTime.UtcNow.ToBinary()))), api_serv, false);
+            string url = (API[method] != null) ? API[method].ToObject<string>() : method;
+
+
             if (worker != null) worker.ReportProgress(101, new object[] { -3, "OK\r\ncalc protect.." });
-            string protect = Convert.ToBase64String(Encoding.UTF8.GetBytes("{\"nonce\":\"" + api_serv["r"] + "\"}")).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+            string protect = Convert.ToBase64String(Encoding.UTF8.GetBytes((method== "revokeCert" || method== "newAccount") ?
+
+                (JWK_HEADERPLACE_PART1+ api_serv["r"]+"\", \"url\":\""+ url+ JWK_HEADERPLACE_PART2+ ",\"jwk\":"+ me.json_jwk_raw+"}") :
+                (JWK_HEADERPLACE_PART1 + api_serv["r"] + "\", \"url\":\"" + url + JWK_HEADERPLACE_PART2 + ",\"kid\":\"" + me.profLocation + "\"}")
+
+                )).TrimEnd('=').Replace('+', '-').Replace('/', '_');
             if (worker != null) worker.ReportProgress(101, new object[] { -3, "OK\r\ncalc payload.." });
             string payload = Convert.ToBase64String(Encoding.UTF8.GetBytes((data.GetType().Name != "String") ? JsonConvert.SerializeObject(data) : (string)data)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
             if (worker != null) worker.ReportProgress(101, new object[] { -3, "OK\r\ncalc sign.." });
+
             string sign = Convert.ToBase64String(utils.makeSign(me._key, Encoding.UTF8.GetBytes(protect + "." + payload))).TrimEnd('=').Replace('+', '-').Replace('/', '_');
             if (worker != null) worker.ReportProgress(101, new object[] { -3, "OK\r\nPOST_API.." });
-            string url = (API[method] != null) ? API[method].ToObject<string>() : method;
-
-            string json = "{\"header\":" + me.json_jwk +
-                ",\"protected\":\"" + protect + "\"" +
+            
+            string json = "{\"protected\":\"" + protect + "\"" +
                 ",\"payload\":\"" + payload + "\"" +
                 ",\"signature\":\"" + sign + "\"}";
             if (worker != null) if (worker.CancellationPending)
@@ -173,6 +185,7 @@ namespace shamkaLEupdater
         }
         static private object POST(string url, object data, bool isRaw)
         {
+            me.lastLocation = null;
             me.code = 0;
             me.details = null;
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
@@ -218,6 +231,7 @@ namespace shamkaLEupdater
                 {
                     HttpWebResponse response = (HttpWebResponse)request.GetResponse();
                     me.code = (int)response.StatusCode;
+                    me.lastLocation = response.GetResponseHeader("Location");
                     object raw = (new StreamReader(response.GetResponseStream()).ReadToEnd());
                     response.Close();
                     raw = JsonConvert.DeserializeObject<object>((string)raw);
@@ -238,9 +252,17 @@ namespace shamkaLEupdater
                     return null;
                 }
                 HttpWebResponse response = (HttpWebResponse)www.Response;
-                me.code = (int)response.StatusCode;
-                object raw = (new StreamReader(response.GetResponseStream()).ReadToEnd());
-                response.Close();
+                object raw = null;
+                if (response != null)
+                {
+                    me.code = (int)response.StatusCode;
+                    raw = (new StreamReader(response.GetResponseStream()).ReadToEnd());
+                    response.Close();
+                }
+                else
+                {
+                    raw = "Нет связи";
+                }
                 throw new Exception("Сервер: " + (string)raw);
             }
         }
@@ -261,7 +283,8 @@ namespace shamkaLEupdater
             {
                 HttpWebResponse response = (HttpWebResponse)request.GetResponse();
                 me.code = (int)response.StatusCode;
-                if (serv_api != null) {
+                if (serv_api != null)
+                {
                     //serv_api.Add("b", response.GetResponseHeader("Boulder-Request-Id"));
                     serv_api.Add("r", response.GetResponseHeader("Replay-Nonce"));
                 }
@@ -284,11 +307,21 @@ namespace shamkaLEupdater
                     return null;
                 }
                 HttpWebResponse response = (HttpWebResponse)www.Response;
-                me.code = (int)response.StatusCode;
-                object raw = (new StreamReader(response.GetResponseStream()).ReadToEnd());
-                response.Close();
+                object raw = null;
+                if (response != null)
+                {
+                    me.code = (int)response.StatusCode;
+                    raw = (new StreamReader(response.GetResponseStream()).ReadToEnd());
+                    response.Close();
+                }
+                else {
+                    raw = "Нет связи";
+                }
                 throw new Exception("Сервер: " + (string)raw);
             }
+        }
+        public keyInfo getUserKey() {
+            return _key;
         }
     }
 }

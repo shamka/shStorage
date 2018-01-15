@@ -581,12 +581,12 @@ namespace shamkaLEupdater
             try
             {
                 string punyCode = idn.GetAscii(domain_dns.Text);
-                Match match = Regex.Match(punyCode, @"^(?-i)(\*\.)?[a-z0-9\.\-_]+$");
+                Match match = Regex.Match(punyCode, @"^(?-i)[a-z0-9\.\-_]+$");
                 if (!match.Success) throw new Exception("Неправильное имя домена");
                 foreach (string name in dmns)
                 {
                     punyCode = idn.GetAscii(name);
-                    match = Regex.Match(punyCode, @"^(?-i)(\*\.)?[a-z0-9\.\-_]+|@|\*$");
+                    match = Regex.Match(punyCode, @"^(?-i)((\*\.)?[a-z0-9\.\-_]+|@|\*)$");
                     if (!match.Success) throw new Exception("Неправильное имя поддомена " + name);
                 }
             }
@@ -597,7 +597,30 @@ namespace shamkaLEupdater
             }
 
             dmns = utils.RemoveDuplicates(dmns);
+            int len = dmns.Length;
+            List<string> removeDMN = new List<string>(); 
+            for (int i = 0; i < len; i++) {
+                if (dmns[i] == null) continue;
+                if (!Regex.IsMatch(dmns[i], @"\*")) continue;
+                string regex = "^.*"+dmns[i].Substring(1).Replace(".", "\\.").Replace("-", "\\-") + "$";
+                for (int j = 0; j < len; j++) {
+                    if (j == i) continue;
+                    if (dmns[j] == null) continue;
+                    if (Regex.IsMatch(dmns[j], regex))
+                    {
+                        removeDMN.Add(dmns[j]);
+                        dmns[j] = null;
+                    }
+                }
+            }
+            dmns = utils.RemoveDuplicates(dmns);
             Array.Sort(dmns, StringComparer.InvariantCulture);
+            dmns = String.Join("\r\n", dmns).Split(new char[] { ',', ' ', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+
+            if (removeDMN.Count > 0) {
+                MessageBox.Show("Сокращены:\r\n"+ String.Join("\r\n", removeDMN), "Предупреждение");
+            }
+            removeDMN = null;
             domain_subs.Text = String.Join("\r\n", dmns);
             subs.Text = String.Format("{0:d}", dmns.Length);
             btn_apply_domain.Enabled = false;
@@ -1010,8 +1033,8 @@ namespace shamkaLEupdater
                 le_backgr.RunWorkerAsync(new object[] { 0, "new-reg", data, acme });
             }
             else {
-                data.Add("contact", "[\"mailto: 'webmaster@" + State.session.domains[le_domain.Text].dns+"'\"]");
                 data.Add("termsOfServiceAgreed", true);
+                data.Add("contact",  Newtonsoft.Json.JsonConvert.DeserializeObject<object>("[\"mailto:webmaster@" + State.session.domains[le_domain.Text].dns+"\"]"));
                 le_backgr.RunWorkerAsync(new object[] { 0, "newAccount", data, acme });
             }
             
@@ -1026,7 +1049,7 @@ namespace shamkaLEupdater
         private void le_makeCSR_Click(object sender, EventArgs e)
         {
             le_gr.Enabled = false;
-            le_backgr.RunWorkerAsync(new object[] { 1, le_privKey.Text, le_defDomain.Text, le_domain.Text });
+            le_backgr.RunWorkerAsync(new object[] { 1, le_privKey.Text, le_defDomain.Text, le_domain.Text,le_makeCSR_withStart.Checked });
         }
         private void le_userKey_SelectedIndexChanged(object sender, EventArgs e)
         {
@@ -1040,7 +1063,7 @@ namespace shamkaLEupdater
         }
         private void le_backgr_DoWork(object sender, DoWorkEventArgs e)
         {
-            
+            bool acmeV2;
             object[] args = (object[])e.Argument;
             e.Result = null;
             try
@@ -1053,112 +1076,239 @@ namespace shamkaLEupdater
                             e.Result = new object[] { 0, LE.makeReq((string)args[1], args[2], le_backgr, false) };
                         }
                         else {
+                            LE.ME.lastLocation = null;
                             e.Result = new object[] { 0, LE.makeReq2((string)args[1], args[2], le_backgr, false) };
+                            LE.ME.profLocation = LE.ME.lastLocation;
+                            if (LE.ME.profLocation != null) le_backgr.ReportProgress(101, new object[] { -2, "OK - "+ LE.ME.profLocation });
                         }
                         break;
                     case 1:
-                        State.le.csr = utils.makeCSR(State.session.keys[(string)args[1]], (string)args[2], State.session.domains[(string)args[3]], le_backgr);
+                        State.le.csr = utils.makeCSR(State.session.keys[(string)args[1]], (string)args[2], State.session.domains[(string)args[3]], le_backgr, (bool)args[4]);
                         le_backgr.ReportProgress(101, new object[] { -2, "OK" });
                         e.Result = new object[] { 1 };
                         break;
                     case 2:
+                        if (LE.ME.profLocation == null)
+                        {
+                            le_backgr.ReportProgress(101, new object[] { -2, "please, reg before" });
+                            le_backgr.ReportProgress(100);
+                            return;
+                        }
                         int i = 0;
+                        acmeV2 = (int)args[3] == 0;
                         string[] dms = State.session.domains[(string)args[1]].subs2;
                         string domain = State.session.domains[(string)args[1]].dns;
+                        List<string> lets = new List<string>();
                         le_backgr.ReportProgress(1);
                         le_backgr.ReportProgress(101, new object[] { -2, String.Format("Начало теста доменов {1:s}. Всего: {0:d}", dms.Length, (string)args[1]) });
-                        foreach (string sub in dms) {
-                            if (le_backgr != null) if (le_backgr.CancellationPending)
-                            {
-                                le_backgr.ReportProgress(101, new object[] { -2, "CANCEL" });
-                                le_backgr.ReportProgress(100);
-                                return;
+                        if (acmeV2)
+                        {
+                            List<string> identifiers = new List<string>();
+                            foreach (string sub in dms) {
+                                identifiers.Add("{\"type\":\"dns\",\"value\":\""+(sub=="@"?domain:sub+"."+domain)+"\"}");
                             }
-                            string test = null;
-                            i++;
-                            if (sub == "@") {
-                                test = domain;
-                            }
-                            else {
-                                test = sub + "." + domain;
-                            }
-                            le_backgr.ReportProgress(101, new object[] { -3, String.Format("{0:d}/{2:d} [ {1:s} ] send..", i, test, dms.Length) });
-                            string met = "new-authz";
-                            Dictionary<string, object> data = new Dictionary<string, object>();
-                            data.Add("resource", met);
-                            data.Add("identifier", new Dictionary<string, object>());
-                            ((Dictionary<string, object>)(data["identifier"])).Add("type", "dns");
-                            ((Dictionary<string, object>)(data["identifier"])).Add("value", test);
-                            JObject ans = (JObject)LE.makeReq(met, data, null, false);
-                            if (ans==null || LE.ME.code != 201) {
-                                le_backgr.ReportProgress(101, new object[] { -2, String.Format("ERROR") });
-                                le_backgr.ReportProgress(100);
-                                e.Result = null;
-                                return;
-                            }
-                            le_backgr.ReportProgress(101, new object[] { -3, String.Format("make..") });
-                            string uri = null, token = null, status = ans["status"].ToObject<string>();
-                            if (status == "pending")
-                            {
-                                foreach (Dictionary<string, string> val in ans["challenges"].ToObject<List<Dictionary<string, string>>>())
-                                {
-                                    if (val["type"] != "http-01") continue;
-                                    uri = val["uri"];
-                                    token = val["token"];
-                                    break;
-                                }
-                                if (uri == null || token == null)
-                                {
-                                    le_backgr.ReportProgress(101, new object[] { -2, String.Format("ERROR") });
-                                    le_backgr.ReportProgress(100);
-                                    e.Result = null;
-                                    return;
-                                }
-                                try
-                                {
-                                    Dictionary<string, string> dd = new Dictionary<string, string>();
-                                    dd.Add("m", "add");
-                                    dd.Add("id", token);
-                                    dd.Add("val", token + "." + LE.th);
-                                    object ans2 = utils.toServ(State.session.servers[(string)args[2]].link, State.session.servers[(string)args[2]].pass, dd);
-                                }
-                                catch (Exception ex)
-                                {
-                                    le_backgr.ReportProgress(101, new object[] { -2, String.Format("ERROR") });
-                                    le_backgr.ReportProgress(100);
-                                    e.Result = null;
-                                    MessageBox.Show("Ошибка\n" + ex.Message, "Результат");
-                                    return;
-                                }
-                                le_backgr.ReportProgress(101, new object[] { -3, String.Format("pending..") });
-                                data.Clear();
-                                data.Add("resource", "challenge");
-                                data.Add("keyAuthorization", token + "." + LE.th);
-                                ans = (JObject)LE.makeReq(uri, data, null, false);
-                                le_backgr.ReportProgress(101, new object[] { -3, String.Format("wait..") });
-                                while (true) {
-                                    ans = (JObject)LE.GET(uri, null, false);
-                                    if (ans["status"].ToObject<string>() == "valid") break;
-                                    if (ans["status"].ToObject<string>() == "invalid") {
-                                        le_backgr.ReportProgress(101, new object[] { -2, "INVALID" });
-                                        le_backgr.ReportProgress(100);
-                                        return;
+                            string payload = "{\"identifiers\": ["+ String.Join(",",identifiers) + "]}";
+                            JObject order = (JObject)LE.makeReq2("newOrder", payload, le_backgr, false);
+                            JToken ident = order.GetValue("identifiers").First;
+                            JToken authz = order.GetValue("authorizations").First;
+                            while (authz != null && ident != null) {
+                                i++;
+                                le_backgr.ReportProgress(101, new object[] { -3, String.Format("{0:d}/{2:d} [ {1:s} ] testName..", i, ident.Value<String>("value"), dms.Length) });
+                                string urlAuthz = authz.Value<string>();
+
+                                JObject order2 = (JObject)LE.GET(urlAuthz,null,false);
+                                bool wildcard = order2.Value<bool>("wildcard");
+                                string domain_ = order2.GetValue("identifier").Value<String>("value");
+                                JArray challenges = order2.Value<JArray>("challenges");
+                                JObject challenge = null;
+                                if (wildcard) {
+                                    for (int j = 0; j < challenges.Count; j++)
+                                    {
+                                        challenge = challenges[j].Value<JObject>();
+                                        if (challenge.Value<string>("type") == "dns-01") {
+                                            break;
+                                        }
+                                        challenge = null;
                                     }
-                                    if (le_backgr != null) if (le_backgr.CancellationPending)
+                                    if (challenge == null) {
+                                        throw new Exception("Отсутствует DNS-01");
+                                    }
+                                }
+                                else {
+                                    for (int j = 0; j < challenges.Count; j++)
+                                    {
+                                        challenge = challenges[j].Value<JObject>();
+                                        if (challenge.Value<string>("type") == "http-01")
+                                        {
+                                            break;
+                                        }
+                                        challenge = null;
+                                    }
+                                    if (challenge == null)
+                                    {
+                                        throw new Exception("Отсутствует HTTP-01");
+                                    }
+                                }
+                                string statusForTest = challenge.Value<string>("status");
+                                le_backgr.ReportProgress(101, new object[] { -3, "wait.." });
+                                if (statusForTest == "pending" || statusForTest=="invalid")
+                                {
+                                    string token = challenge.Value<string>("token");
+                                    string keyauthorization = token + "." + LE.getThumbprint();
+                                    string uriToTest = challenge.Value<string>("url");
+                                    string txtdomain = "_acme-challenge."+ domain_;
+                                    string txt = Convert.ToBase64String(utils.makeSign(LE.ME.getUserKey(), Encoding.UTF8.GetBytes(keyauthorization))).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+                                    Dictionary<string, string> reqToServ = new Dictionary<string, string>();
+                                    reqToServ.Add("m", "addDNS");
+                                    reqToServ.Add("domain", txtdomain);
+                                    reqToServ.Add("token", txt);
+                                    object servAnswerToTest = utils.toServ(State.session.servers[(string)args[2]].link, State.session.servers[(string)args[2]].pass, reqToServ);
+                                    if (servAnswerToTest.GetType().ToString() == "System.String")
+                                    {
+                                        string servAns = (string)servAnswerToTest;
+                                        if (servAns == "ok") {
+                                            //OK add TXT record
+                                            JObject order3 = (JObject)LE.makeReq2(uriToTest, "{\"keyAuthorization\": \""+keyauthorization+"\"}", le_backgr, false);
+                                            string status = order3.Value<string>("status");
+                                            uriToTest = order3.Value<string>("url");
+                                            while (status == "pending")
+                                            {
+                                                JObject order4 = (JObject)LE.GET(uriToTest, null, false);
+                                                status = order4.Value<string>("status");
+                                            }
+                                            if (status == "invalid") {
+                                                le_backgr.ReportProgress(101, new object[] { -2, "invalid" });
+                                                break;
+                                            }
+                                            else if (status == "valid") {
+                                                le_backgr.ReportProgress(101, new object[] { -2, "OK" });
+                                            }
+                                        }
+                                        else {
+                                            le_backgr.ReportProgress(101, new object[] { -2, "ERROR. Serv bad answer" });
+                                            break;
+                                        }
+                                    }
+                                    else {
+                                        le_backgr.ReportProgress(101, new object[] { -2, "ERROR. Serv bad answer" });
+                                        break;
+                                    }
+                                }
+                                else if (statusForTest == "valid") {
+                                    le_backgr.ReportProgress(101, new object[] { -2, "OK" });
+                                }
+                                authz = authz.Next;
+                                ident = ident.Next;
+                            }
+                            if (authz == null) {
+                                //FINAL
+                            }
+                        }
+                        else
+                        {
+                            foreach (string sub in dms)
+                            {
+                                if (le_backgr != null) if (le_backgr.CancellationPending)
                                     {
                                         le_backgr.ReportProgress(101, new object[] { -2, "CANCEL" });
                                         le_backgr.ReportProgress(100);
                                         return;
                                     }
-                                    Thread.Sleep(3000);
+                                string test = null;
+                                i++;
+                                le_backgr.ReportProgress(101, new object[] { -3, String.Format("{0:d}/{2:d} [ {1:s} ] testName..", i, sub, dms.Length) });
+                                if (sub == "@")
+                                {
+                                    test = domain;
                                 }
+                                else
+                                {
+                                    test = sub + "." + domain;
+                                }
+                                le_backgr.ReportProgress(101, new object[] { -3, "send.." });
+
+                                string met = "new-authz";
+                                Dictionary<string, object> data = new Dictionary<string, object>();
+                                data.Add("resource", met);
+                                data.Add("identifier", new Dictionary<string, object>());
+                                ((Dictionary<string, object>)(data["identifier"])).Add("type", "dns");
+                                ((Dictionary<string, object>)(data["identifier"])).Add("value", test);
+                                JObject ans = (JObject)LE.makeReq(met, data, null, false);
+                                if (ans == null || LE.ME.code != 201)
+                                {
+                                    le_backgr.ReportProgress(101, new object[] { -2, String.Format("ERROR") });
+                                    le_backgr.ReportProgress(100);
+                                    e.Result = null;
+                                    return;
+                                }
+                                le_backgr.ReportProgress(101, new object[] { -3, String.Format("make..") });
+                                string uri = null, token = null, status = ans["status"].ToObject<string>();
+                                if (status == "pending")
+                                {
+                                    foreach (Dictionary<string, string> val in ans["challenges"].ToObject<List<Dictionary<string, string>>>())
+                                    {
+                                        if (val["type"] != "http-01") continue;
+                                        uri = val["uri"];
+                                        token = val["token"];
+                                        break;
+                                    }
+                                    if (uri == null || token == null)
+                                    {
+                                        le_backgr.ReportProgress(101, new object[] { -2, String.Format("ERROR") });
+                                        le_backgr.ReportProgress(100);
+                                        e.Result = null;
+                                        return;
+                                    }
+                                    try
+                                    {
+                                        Dictionary<string, string> dd = new Dictionary<string, string>();
+                                        dd.Add("m", "add");
+                                        dd.Add("id", token);
+                                        dd.Add("val", token + "." + LE.th);
+                                        object ans2 = utils.toServ(State.session.servers[(string)args[2]].link, State.session.servers[(string)args[2]].pass, dd);
+                                    }
+                                    catch (Exception ex5)
+                                    {
+                                        le_backgr.ReportProgress(101, new object[] { -2, String.Format("ERROR") });
+                                        le_backgr.ReportProgress(100);
+                                        e.Result = null;
+                                        MessageBox.Show("Ошибка\n" + ex5.Message, "Результат");
+                                        return;
+                                    }
+                                    le_backgr.ReportProgress(101, new object[] { -3, String.Format("pending..") });
+                                    data.Clear();
+                                    data.Add("resource", "challenge");
+                                    data.Add("keyAuthorization", token + "." + LE.th);
+                                    ans = (JObject)LE.makeReq(uri, data, null, false);
+                                    le_backgr.ReportProgress(101, new object[] { -3, String.Format("wait..") });
+                                    while (true)
+                                    {
+                                        ans = (JObject)LE.GET(uri, null, false);
+                                        if (ans["status"].ToObject<string>() == "valid") break;
+                                        if (ans["status"].ToObject<string>() == "invalid")
+                                        {
+                                            le_backgr.ReportProgress(101, new object[] { -2, "INVALID" });
+                                            le_backgr.ReportProgress(100);
+                                            return;
+                                        }
+                                        if (le_backgr != null) if (le_backgr.CancellationPending)
+                                            {
+                                                le_backgr.ReportProgress(101, new object[] { -2, "CANCEL" });
+                                                le_backgr.ReportProgress(100);
+                                                return;
+                                            }
+                                        Thread.Sleep(3000);
+                                    }
+                                    le_backgr.ReportProgress(100);
+                                }
+                                else
+                                {
+
+                                }
+
+                                le_backgr.ReportProgress(101, new object[] { -2, String.Format("OK") });
                                 le_backgr.ReportProgress(100);
                             }
-                            else {
-
-                            }
-                            le_backgr.ReportProgress(101, new object[] { -2, String.Format("OK") });
-                            le_backgr.ReportProgress(100);
                         }
                         e.Result = new object[] { 2 };
                         break;
@@ -1273,8 +1423,14 @@ namespace shamkaLEupdater
 
         private void le_dTest_Click(object sender, EventArgs e)
         {
+            int acme = radioACME2.Checked ? 0 : (radioACME1.Checked ? 1 : -1);
+            if (acme == -1)
+            {
+                MessageBox.Show("Необходимо указать версию ACME", "Ошибка");
+                return;
+            }
             le_gr.Enabled = false;
-            le_backgr.RunWorkerAsync(new object[] { 2, le_domain.Text, le_server.Text });
+            le_backgr.RunWorkerAsync(new object[] { 2, le_domain.Text, le_server.Text, acme });
         }
 
         private void le_getCERT_Click(object sender, EventArgs e)

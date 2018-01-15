@@ -179,7 +179,7 @@ namespace shamkaLEupdater
                             }
                             j += 43;
                             string domainName = Encoding.UTF8.GetString(kk);
-                            if (box1.childs[domainIndex + 1].container || box1.childs[domainIndex + 1].tag != (UInt64)BerTags.OCTET_STRING || box1.childs[domainIndex + 1].tClass != (byte)BerClass.PRIVATE || box1.childs[domainIndex + 2].payloadLength < 2) utils.pu(96);
+                            if (box1.childs[domainIndex + 1].container || box1.childs[domainIndex + 1].tag != (UInt64)BerTags.OCTET_STRING || box1.childs[domainIndex + 1].tClass != (byte)BerClass.PRIVATE || box1.childs[domainIndex + 2].payloadLength < 1) utils.pu(96);
                             kk = box1.childs[domainIndex + 1].payload;
                             for (int i = 0; i < kk.Length; i++, j += 73)
                             {

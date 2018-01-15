@@ -30,6 +30,7 @@
         {
             this.tab_certs = new System.Windows.Forms.TabPage();
             this.groupBox_certs = new System.Windows.Forms.GroupBox();
+            this.tExpired = new System.Windows.Forms.TextBox();
             this.certs_cns = new System.Windows.Forms.TextBox();
             this.certs_finger = new System.Windows.Forms.TextBox();
             this.label15 = new System.Windows.Forms.Label();
@@ -101,6 +102,8 @@
             this.le_clear = new System.Windows.Forms.Button();
             this.le_cancel = new System.Windows.Forms.Button();
             this.le_gr = new System.Windows.Forms.GroupBox();
+            this.radioACME2 = new System.Windows.Forms.RadioButton();
+            this.radioACME1 = new System.Windows.Forms.RadioButton();
             this.le_privKey = new System.Windows.Forms.ComboBox();
             this.le_server = new System.Windows.Forms.ComboBox();
             this.label14 = new System.Windows.Forms.Label();
@@ -117,12 +120,7 @@
             this.le_defDomain = new System.Windows.Forms.ComboBox();
             this.le_log = new System.Windows.Forms.TextBox();
             this.le_backgr = new System.ComponentModel.BackgroundWorker();
-<<<<<<< HEAD
-            this.tExpired = new System.Windows.Forms.TextBox();
-=======
-            this.radioACME1 = new System.Windows.Forms.RadioButton();
-            this.radioACME2 = new System.Windows.Forms.RadioButton();
->>>>>>> 0d072d3f07c60b1ffbf546050c4cb2741e440908
+            this.le_makeCSR_withStart = new System.Windows.Forms.CheckBox();
             this.tab_certs.SuspendLayout();
             this.groupBox_certs.SuspendLayout();
             this.groupBox_export_certs.SuspendLayout();
@@ -171,6 +169,14 @@
             this.groupBox_certs.Size = new System.Drawing.Size(630, 328);
             this.groupBox_certs.TabIndex = 13;
             this.groupBox_certs.TabStop = false;
+            // 
+            // tExpired
+            // 
+            this.tExpired.Location = new System.Drawing.Point(445, 129);
+            this.tExpired.Name = "tExpired";
+            this.tExpired.ReadOnly = true;
+            this.tExpired.Size = new System.Drawing.Size(177, 20);
+            this.tExpired.TabIndex = 14;
             // 
             // certs_cns
             // 
@@ -900,6 +906,7 @@
             // 
             // le_gr
             // 
+            this.le_gr.Controls.Add(this.le_makeCSR_withStart);
             this.le_gr.Controls.Add(this.radioACME2);
             this.le_gr.Controls.Add(this.radioACME1);
             this.le_gr.Controls.Add(this.le_privKey);
@@ -921,6 +928,26 @@
             this.le_gr.Size = new System.Drawing.Size(513, 136);
             this.le_gr.TabIndex = 16;
             this.le_gr.TabStop = false;
+            // 
+            // radioACME2
+            // 
+            this.radioACME2.AutoSize = true;
+            this.radioACME2.Location = new System.Drawing.Point(381, 32);
+            this.radioACME2.Name = "radioACME2";
+            this.radioACME2.Size = new System.Drawing.Size(67, 17);
+            this.radioACME2.TabIndex = 17;
+            this.radioACME2.Text = "ACMEv2";
+            this.radioACME2.UseVisualStyleBackColor = true;
+            // 
+            // radioACME1
+            // 
+            this.radioACME1.AutoSize = true;
+            this.radioACME1.Location = new System.Drawing.Point(381, 8);
+            this.radioACME1.Name = "radioACME1";
+            this.radioACME1.Size = new System.Drawing.Size(67, 17);
+            this.radioACME1.TabIndex = 16;
+            this.radioACME1.Text = "ACMEv1";
+            this.radioACME1.UseVisualStyleBackColor = true;
             // 
             // le_privKey
             // 
@@ -1073,35 +1100,15 @@
             this.le_backgr.ProgressChanged += new System.ComponentModel.ProgressChangedEventHandler(this.le_backgr_ProgressChanged);
             this.le_backgr.RunWorkerCompleted += new System.ComponentModel.RunWorkerCompletedEventHandler(this.le_backgr_RunWorkerCompleted);
             // 
-<<<<<<< HEAD
-            // tExpired
+            // le_makeCSR_withStart
             // 
-            this.tExpired.Location = new System.Drawing.Point(445, 129);
-            this.tExpired.Name = "tExpired";
-            this.tExpired.ReadOnly = true;
-            this.tExpired.Size = new System.Drawing.Size(177, 20);
-            this.tExpired.TabIndex = 14;
-=======
-            // radioACME1
-            // 
-            this.radioACME1.AutoSize = true;
-            this.radioACME1.Location = new System.Drawing.Point(381, 8);
-            this.radioACME1.Name = "radioACME1";
-            this.radioACME1.Size = new System.Drawing.Size(67, 17);
-            this.radioACME1.TabIndex = 16;
-            this.radioACME1.Text = "ACMEv1";
-            this.radioACME1.UseVisualStyleBackColor = true;
-            // 
-            // radioACME2
-            // 
-            this.radioACME2.AutoSize = true;
-            this.radioACME2.Location = new System.Drawing.Point(381, 32);
-            this.radioACME2.Name = "radioACME2";
-            this.radioACME2.Size = new System.Drawing.Size(67, 17);
-            this.radioACME2.TabIndex = 17;
-            this.radioACME2.Text = "ACMEv2";
-            this.radioACME2.UseVisualStyleBackColor = true;
->>>>>>> 0d072d3f07c60b1ffbf546050c4cb2741e440908
+            this.le_makeCSR_withStart.AutoSize = true;
+            this.le_makeCSR_withStart.Location = new System.Drawing.Point(381, 61);
+            this.le_makeCSR_withStart.Name = "le_makeCSR_withStart";
+            this.le_makeCSR_withStart.Size = new System.Drawing.Size(30, 17);
+            this.le_makeCSR_withStart.TabIndex = 18;
+            this.le_makeCSR_withStart.Text = "*";
+            this.le_makeCSR_withStart.UseVisualStyleBackColor = true;
             // 
             // Form1
             // 
@@ -1226,12 +1233,10 @@
         private System.Windows.Forms.Button le_cancel;
         private System.Windows.Forms.Button le_clear;
         private System.Windows.Forms.Button button1;
-<<<<<<< HEAD
         private System.Windows.Forms.TextBox tExpired;
-=======
         private System.Windows.Forms.RadioButton radioACME2;
         private System.Windows.Forms.RadioButton radioACME1;
->>>>>>> 0d072d3f07c60b1ffbf546050c4cb2741e440908
+        private System.Windows.Forms.CheckBox le_makeCSR_withStart;
     }
 }
 

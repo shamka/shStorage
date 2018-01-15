@@ -6,6 +6,7 @@ using System.IO;
 using System.Security.Cryptography;
 using Libraries;
 using System.Net;
+using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using System.Numerics;
 using System.Globalization;
@@ -330,10 +331,12 @@ namespace shamkaLEupdater
             Stream dataStream = request.GetRequestStream();
             dataStream.Write(byteArray, 0, byteArray.Length);
             dataStream.Close();
+            Exception exx=null;
+            object raw = null;
             try
             {
                 HttpWebResponse response = (HttpWebResponse)request.GetResponse();
-                object raw = (new StreamReader(response.GetResponseStream()).ReadToEnd());
+                raw = (new StreamReader(response.GetResponseStream()).ReadToEnd());
                 sha1.Initialize();
                 sha1.TransformBlock(ut, 0, ut.Length, ut, 0);
                 sha1.TransformBlock(sk, 0, sk.Length, sk, 0);
@@ -350,11 +353,12 @@ namespace shamkaLEupdater
                 raw = JsonConvert.DeserializeObject<object>((string)raw);
                 return raw;
             }
-            catch (WebException www) {
+            catch (WebException www)
+            {
                 HttpWebResponse response = (HttpWebResponse)www.Response;
-                object raw = (new StreamReader(response.GetResponseStream()).ReadToEnd());
+                raw = (new StreamReader(response.GetResponseStream()).ReadToEnd());
                 response.Close();
-                throw new Exception("Сервер: "+((string)raw).Substring(0,128));
+                throw new Exception("Сервер: " + ((((string)raw).Length>128)?(((string)raw).Substring(0, 128)):((string)raw)));
             }
         }
         static public byte[] makeRootCertFromPriv(string KeyName) {
@@ -428,18 +432,32 @@ namespace shamkaLEupdater
         static public string dataTo64(byte[] data, string block) {
             return dataTo64(data, "-----BEGIN " + block + "-----", "-----END " + block + "-----");
         }
-        static public byte[] makeCSR(keyInfo key, string def, DomainInfo dom, System.ComponentModel.BackgroundWorker worker) {
+        static public byte[] makeCSR(keyInfo key, string def, DomainInfo dom, System.ComponentModel.BackgroundWorker worker, bool star) {
             worker.ReportProgress(101, new object[] { -3, "Pattern parse.." });
             Ber csr = new Ber(BigInteger.Parse(
                 "3042302e020100300b3109300706035504030c00a01c301a06092a864886f70d01090e310d300b30090603551d1104023000300d06092a864886f70d01010b0500030100", 
                 NumberStyles.AllowHexSpecifier).ToByteArray().Reverse().ToArray());
             worker.ReportProgress(101, new object[] { -3, "OK\r\nEdit CN.." });
-            csr.childs[0].childs[1].childs[0].childs[0].childs[1].payload = Encoding.UTF8.GetBytes((def == "@") ? dom.dns : String.Format("{0}.{1}", def, dom.dns));
+            if (star) {
+                csr.childs[0].childs[1].childs[0].childs[0].childs[1].payload = Encoding.UTF8.GetBytes((def == "@") ? dom.dns : String.Format("{0}.{1}", def, dom.dns));
+            }
+            else {
+                csr.childs[0].childs[1].childs[0].childs[0].childs[1].payload = Encoding.UTF8.GetBytes((def == "@") ? dom.dns : String.Format("{0}.{1}", def, dom.dns).Replace("*.",""));
+            }
             Ber subs = csr.childs[0].childs[2].childs[0].childs[1].childs[0].childs[0].childs[1].childs[0];
             csr.childs[0].childs.Insert(2,key.pub.cloneAsParrent());
             worker.ReportProgress(101, new object[] { -3, "OK\r\nEdit subs.." });
             foreach (string sub in dom.subs2) {
-                subs.addChild(new Ber(BerClass.CONTEXT,BerTags.INTEGER,false, Encoding.UTF8.GetBytes((sub == "@") ? dom.dns : String.Format("{0}.{1}", sub, dom.dns))));
+                if (Regex.IsMatch(sub, "\\*"))
+                {
+                        subs.addChild(new Ber(BerClass.CONTEXT, BerTags.INTEGER, false, Encoding.UTF8.GetBytes(String.Format("{0}.{1}", sub, dom.dns))));
+                        subs.addChild(new Ber(BerClass.CONTEXT, BerTags.INTEGER, false, Encoding.UTF8.GetBytes((sub == "*") ? dom.dns : String.Format("{0}.{1}", sub, dom.dns))));
+                }
+                else
+                {
+                    subs.addChild(new Ber(BerClass.CONTEXT, BerTags.INTEGER, false, Encoding.UTF8.GetBytes((sub == "@") ? dom.dns : String.Format("{0}.{1}", sub, dom.dns))));
+                }
+                
             };
             worker.ReportProgress(101, new object[] { -3, "OK\r\nMake sign.." });
             csr.childs[2].payload = makeSign(key, csr.childs[0].makeDer());
