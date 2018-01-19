@@ -136,9 +136,15 @@ namespace shamkaLEupdater
             }
             API = (JObject)POST(url, json, false);
             if (worker != null) worker.ReportProgress(101, new object[] { -2, "OK" });
-            if (API == null && me.code == 409)
+            if (API == null)
             {
-                worker.ReportProgress(101, new object[] { -2, "Вы уже зарегистрированы!" });
+                if (me.code == 409)
+                {
+                    worker.ReportProgress(101, new object[] { -2, "Вы уже зарегистрированы!" });
+                }
+                else if (me.code == 400) {
+                    return JsonConvert.DeserializeObject<object>("{\"rt\":400}");
+                }
             }
             return API;
         }

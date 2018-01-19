@@ -1108,7 +1108,9 @@ namespace shamkaLEupdater
                                 identifiers.Add("{\"type\":\"dns\",\"value\":\""+(sub=="@"?domain:sub+"."+domain)+"\"}");
                             }
                             string payload = "{\"identifiers\": ["+ String.Join(",",identifiers) + "]}";
+                            LE.ME.lastLocation = null;
                             JObject order = (JObject)LE.makeReq2("newOrder", payload, le_backgr, false);
+                            String orderLink = LE.ME.lastLocation;
                             JToken ident = order.GetValue("identifiers").First;
                             JToken authz = order.GetValue("authorizations").First;
                             string finalize = order.Value<string>("finalize");
@@ -1152,7 +1154,7 @@ namespace shamkaLEupdater
                                 }
                                 string statusForTest = challenge.Value<string>("status");
                                 le_backgr.ReportProgress(101, new object[] { -3, "wait.." });
-                                if (statusForTest == "pending" || statusForTest == "invalid")
+                                if (statusForTest == "pending")
                                 {
                                     string token = challenge.Value<string>("token");
                                     string keyauthorization = token + "." + LE.getThumbprint();
@@ -1169,20 +1171,27 @@ namespace shamkaLEupdater
                                         string servAns = (string)servAnswerToTest;
                                         if (servAns == "ok") {
                                             //OK add TXT record
-                                            JObject order3 = (JObject)LE.makeReq2(uriToTest, "{\"keyAuthorization\": \""+keyauthorization+"\"}", le_backgr, false);
-                                            string status = order3.Value<string>("status");
-                                            uriToTest = order3.Value<string>("url");
-                                            while (status == "pending")
-                                            {
-                                                JObject order4 = (JObject)LE.GET(uriToTest, null, false);
-                                                status = order4.Value<string>("status");
-                                            }
-                                            if (status == "invalid") {
-                                                le_backgr.ReportProgress(101, new object[] { -2, "invalid" });
-                                                break;
-                                            }
-                                            else if (status == "valid") {
-                                                le_backgr.ReportProgress(101, new object[] { -2, "OK" });
+                                            JObject order3 = (JObject)LE.makeReq2(uriToTest, "{\"keyAuthorization\": \"" + keyauthorization + "\"}", le_backgr, false);
+                                            if (order3 != null) {
+                                                if (order3.Value<int>("rt") == 400) {
+                                                    order3 = (JObject)LE.makeReq2(uriToTest, "{\"keyAuthorization\": \"" + keyauthorization + "\"}", le_backgr, false);
+                                                }
+                                                string status = order3.Value<string>("status");
+                                                uriToTest = order3.Value<string>("url");
+                                                while (status == "pending")
+                                                {
+                                                    JObject order4 = (JObject)LE.GET(uriToTest, null, false);
+                                                    status = order4.Value<string>("status");
+                                                }
+                                                if (status == "invalid")
+                                                {
+                                                    le_backgr.ReportProgress(101, new object[] { -2, "invalid" });
+                                                    break;
+                                                }
+                                                else if (status == "valid")
+                                                {
+                                                    le_backgr.ReportProgress(101, new object[] { -2, "OK" });
+                                                }
                                             }
                                         }
                                         else {
@@ -1197,8 +1206,8 @@ namespace shamkaLEupdater
                                 }
                                 else if (statusForTest == "invalid")
                                 {
-                                    JObject order5 = (JObject)LE.makeReq2(finalize, "{}", le_backgr, false);
-                                    le_backgr.ReportProgress(101, new object[] { -2, "OK" });
+                                    JObject order5 = (JObject)LE.makeReq2(orderLink, "{\"status\": \"deactivated\"}", le_backgr, false);
+                                    le_backgr.ReportProgress(101, new object[] { -2, "DEACTIVATED" });
                                 }
                                 else if (statusForTest == "valid") {
                                     le_backgr.ReportProgress(101, new object[] { -2, "OK" });
@@ -1486,4 +1495,3 @@ namespace shamkaLEupdater
         }
     }
 }
-
