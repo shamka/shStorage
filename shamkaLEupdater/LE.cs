@@ -22,6 +22,8 @@ namespace shamkaLEupdater
         private string thumbprint;
         public string lastLocation;
         public string profLocation;
+        public string finalize;
+        public string certURI;
 
         private static readonly string JWK_HEADERPLACE_PART1 = "{\"nonce\": \"";
         private static readonly string JWK_HEADERPLACE_PART2 = "\", \"alg\": \"RS256\"";//
@@ -295,7 +297,7 @@ namespace shamkaLEupdater
                     serv_api.Add("r", response.GetResponseHeader("Replay-Nonce"));
                 }
                 object raw = (new StreamReader(response.GetResponseStream()).ReadToEnd());
-                if (isRaw) return (byte[])raw;
+                if (isRaw) return (string)raw;
                 byte[] byteArray = Encoding.UTF8.GetBytes((string)raw);
                 response.Close();
                 raw = JsonConvert.DeserializeObject<object>((string)raw);

@@ -102,6 +102,7 @@
             this.le_clear = new System.Windows.Forms.Button();
             this.le_cancel = new System.Windows.Forms.Button();
             this.le_gr = new System.Windows.Forms.GroupBox();
+            this.le_makeCSR_withStart = new System.Windows.Forms.CheckBox();
             this.radioACME2 = new System.Windows.Forms.RadioButton();
             this.radioACME1 = new System.Windows.Forms.RadioButton();
             this.le_privKey = new System.Windows.Forms.ComboBox();
@@ -120,7 +121,6 @@
             this.le_defDomain = new System.Windows.Forms.ComboBox();
             this.le_log = new System.Windows.Forms.TextBox();
             this.le_backgr = new System.ComponentModel.BackgroundWorker();
-            this.le_makeCSR_withStart = new System.Windows.Forms.CheckBox();
             this.tab_certs.SuspendLayout();
             this.groupBox_certs.SuspendLayout();
             this.groupBox_export_certs.SuspendLayout();
@@ -929,6 +929,16 @@
             this.le_gr.TabIndex = 16;
             this.le_gr.TabStop = false;
             // 
+            // le_makeCSR_withStart
+            // 
+            this.le_makeCSR_withStart.AutoSize = true;
+            this.le_makeCSR_withStart.Location = new System.Drawing.Point(381, 61);
+            this.le_makeCSR_withStart.Name = "le_makeCSR_withStart";
+            this.le_makeCSR_withStart.Size = new System.Drawing.Size(30, 17);
+            this.le_makeCSR_withStart.TabIndex = 18;
+            this.le_makeCSR_withStart.Text = "*";
+            this.le_makeCSR_withStart.UseVisualStyleBackColor = true;
+            // 
             // radioACME2
             // 
             this.radioACME2.AutoSize = true;
@@ -1099,16 +1109,6 @@
             this.le_backgr.DoWork += new System.ComponentModel.DoWorkEventHandler(this.le_backgr_DoWork);
             this.le_backgr.ProgressChanged += new System.ComponentModel.ProgressChangedEventHandler(this.le_backgr_ProgressChanged);
             this.le_backgr.RunWorkerCompleted += new System.ComponentModel.RunWorkerCompletedEventHandler(this.le_backgr_RunWorkerCompleted);
-            // 
-            // le_makeCSR_withStart
-            // 
-            this.le_makeCSR_withStart.AutoSize = true;
-            this.le_makeCSR_withStart.Location = new System.Drawing.Point(381, 61);
-            this.le_makeCSR_withStart.Name = "le_makeCSR_withStart";
-            this.le_makeCSR_withStart.Size = new System.Drawing.Size(30, 17);
-            this.le_makeCSR_withStart.TabIndex = 18;
-            this.le_makeCSR_withStart.Text = "*";
-            this.le_makeCSR_withStart.UseVisualStyleBackColor = true;
             // 
             // Form1
             // 

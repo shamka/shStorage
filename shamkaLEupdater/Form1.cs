@@ -891,6 +891,8 @@ namespace shamkaLEupdater
             State.selectCertName = (string)cb_certs.SelectedItem;
             certs_name.Text = State.selectCertName;
             certs_pin.Text = State.session.certs[State.selectCertName].pinSHA256;
+            string temp = Encoding.UTF8.GetString(State.session.certs[State.selectCertName].cert.childs[0].childs[4].childs[1].payload);
+            tExpired.Text = String.Format("{2:s}.{1:s}.20{0:s} {3:s}:{4:s}:{5:s} GMT", temp.Substring(0, 2), temp.Substring(2, 2), temp.Substring(4, 2), temp.Substring(6, 2), temp.Substring(8, 2), temp.Substring(10, 2));
             certs_length.Text = State.session.certs[State.selectCertName].bits.ToString() +
                 ((State.session.keyPins.Contains(certs_pin.Text)) ? " (P)" : "") +
                 ((State.session.certs[State.selectCertName].CN == State.session.certs[State.selectCertName].iCN) ? " (ROOT)" : "");
@@ -1088,7 +1090,7 @@ namespace shamkaLEupdater
                         e.Result = new object[] { 1 };
                         break;
                     case 2:
-                        if (LE.ME.profLocation == null)
+                        if (LE.ME.profLocation == null && radioACME2.Checked)
                         {
                             le_backgr.ReportProgress(101, new object[] { -2, "please, reg before" });
                             le_backgr.ReportProgress(100);
@@ -1106,17 +1108,28 @@ namespace shamkaLEupdater
                             List<string> identifiers = new List<string>();
                             foreach (string sub in dms) {
                                 identifiers.Add("{\"type\":\"dns\",\"value\":\""+(sub=="@"?domain:sub+"."+domain)+"\"}");
+                                if (sub == "*") {
+                                    identifiers.Add("{\"type\":\"dns\",\"value\":\"" + domain + "\"}");
+
+                                }
                             }
                             string payload = "{\"identifiers\": ["+ String.Join(",",identifiers) + "]}";
                             LE.ME.lastLocation = null;
                             JObject order = (JObject)LE.makeReq2("newOrder", payload, le_backgr, false);
                             String orderLink = LE.ME.lastLocation;
-                            JToken ident = order.GetValue("identifiers").First;
+                            JToken ident = order.GetValue("identifiers").Last;
                             JToken authz = order.GetValue("authorizations").First;
-                            string finalize = order.Value<string>("finalize");
+                            LE.ME.finalize = order.Value<string>("finalize");
+                            try
+                            {
+                                LE.ME.certURI = order.Value<string>("certificate");
+                            }
+                            catch (Exception er2) {
+                                LE.ME.certURI = null;
+                            }
                             while (authz != null && ident != null) {
                                 i++;
-                                le_backgr.ReportProgress(101, new object[] { -3, String.Format("{0:d}/{2:d} [ {1:s} ] testName..", i, ident.Value<String>("value"), dms.Length) });
+                                le_backgr.ReportProgress(101, new object[] { -3, String.Format("{0:d}/{2:d} [ {1:s} ] testName..", i, ident.Value<String>("value"), identifiers.Count) });
                                 string urlAuthz = authz.Value<string>();
 
                                 JObject order2 = (JObject)LE.GET(urlAuthz,null,false);
@@ -1124,7 +1137,9 @@ namespace shamkaLEupdater
                                 string domain_ = order2.GetValue("identifier").Value<String>("value");
                                 JArray challenges = order2.Value<JArray>("challenges");
                                 JObject challenge = null;
+                                string subdomain;
                                 if (wildcard) {
+                                    subdomain = "_acme-challenge.";
                                     for (int j = 0; j < challenges.Count; j++)
                                     {
                                         challenge = challenges[j].Value<JObject>();
@@ -1138,10 +1153,11 @@ namespace shamkaLEupdater
                                     }
                                 }
                                 else {
+                                    subdomain = "";
                                     for (int j = 0; j < challenges.Count; j++)
                                     {
                                         challenge = challenges[j].Value<JObject>();
-                                        if (challenge.Value<string>("type") == "http-01")
+                                        if (challenge.Value<string>("type") == "dns-01")
                                         {
                                             break;
                                         }
@@ -1159,7 +1175,7 @@ namespace shamkaLEupdater
                                     string token = challenge.Value<string>("token");
                                     string keyauthorization = token + "." + LE.getThumbprint();
                                     string uriToTest = challenge.Value<string>("url");
-                                    string txtdomain = "_acme-challenge."+ domain_;
+                                    string txtdomain = subdomain + domain_;
                                     string txt = Convert.ToBase64String(System.Security.Cryptography.SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(keyauthorization))).TrimEnd('=').Replace('+', '-').Replace('/', '_');
                                     Dictionary<string, string> reqToServ = new Dictionary<string, string>();
                                     reqToServ.Add("m", "addDNS");
@@ -1213,7 +1229,7 @@ namespace shamkaLEupdater
                                     le_backgr.ReportProgress(101, new object[] { -2, "OK" });
                                 }
                                 authz = authz.Next;
-                                ident = ident.Next;
+                                ident = ident.Previous;
                             }
                             if (authz == null) {
                                 //FINAL
@@ -1328,36 +1344,97 @@ namespace shamkaLEupdater
                         e.Result = new object[] { 2 };
                         break;
                     case 3:
-                        le_backgr.ReportProgress(101, new object[] { -2, "GET_CERT START" });
-                        string met_3 = "new-cert";
-                        Dictionary<string, object> data_3 = new Dictionary<string, object>();
-                        data_3.Add("resource", met_3);
-                        data_3.Add("csr", Convert.ToBase64String(State.le.csr).TrimEnd('=').Replace('+', '-').Replace('/', '_'));
-                        byte[] ans_3 = (byte[])LE.makeReq(met_3, data_3, le_backgr, true);
-                        if (ans_3 != null)
+                        if (LE.ME.finalize == null && radioACME2.Checked)
                         {
-                            if (ans_3[0] != 0x30) throw new Exception("Ошибка в ASN1 данных");
-                            Libraries.Ber c = new Libraries.Ber(ans_3);
-                            if (c.childs.Count != 3) { throw new Exception("Не удалось обнаружить сертификат"); }
-                            certInfo cert = new certInfo(c);
-                            foreach (var pair in State.session.certs)
-                            {
-                                if (pair.Value.fingerPrint == cert.fingerPrint)
-                                {
-                                    cb_certs.SelectedItem = pair.Key;
-                                    le_backgr.ReportProgress(101, new object[] { -2, "GET_CERT ERROR" });
-                                    throw new Exception("Сертификат уже добавлен");
-                                }
-                            }
-                            State.selectCertName = String.Format("*{0:d}***{2:s}***{1:s}", cert.bits, cert.fingerPrint, (string)args[1]);
-                            State.session.certs.Add(State.selectCertName, cert);
-                            State.modified = formModState.MODIFIED;
-                            le_backgr.ReportProgress(101, new object[] { -2, "GET_CERT OK" });
-                            e.Result = new object[] { 3 };
+                            le_backgr.ReportProgress(101, new object[] { -2, "please, check domains before" });
+                            le_backgr.ReportProgress(100);
+                            return;
                         }
-                        else {
-                            le_backgr.ReportProgress(101, new object[] { -2, "GET_CERT ERROR" });
-                            if(LE.ME.details!=null) le_backgr.ReportProgress(101, new object[] { -1, LE.ME.details });
+                        acmeV2 = (int)args[2] == 0;
+                        le_backgr.ReportProgress(101, new object[] { -2, "GET_CERT START" });
+                        Dictionary<string, object> data_3 = new Dictionary<string, object>();
+                        data_3.Add("csr", Convert.ToBase64String(State.le.csr).TrimEnd('=').Replace('+', '-').Replace('/', '_'));
+                        byte[] ans_3 = null;
+                        if (acmeV2)
+                        {
+                            if (LE.ME.certURI == null)
+                            {
+                                JObject orderFin = (JObject)LE.makeReq2(LE.ME.finalize, data_3, le_backgr, false);
+                                LE.ME.certURI = orderFin.Value<string>("certificate");
+                            }
+                            string[] certs = (new Regex("\n\n")).Split((string)LE.GET(LE.ME.certURI, null, true));
+                            if (certs.Length >= 2)
+                            {
+                                certInfo userCert = utils.parsePubKey(new MemoryStream(Encoding.UTF8.GetBytes(certs[0])));
+                                certInfo caCert = utils.parsePubKey(new MemoryStream(Encoding.UTF8.GetBytes(certs[1])));
+
+
+                                foreach (var pair in State.session.certs)
+                                {
+                                    if (caCert != null && pair.Value.fingerPrint == caCert.fingerPrint)
+                                    {
+                                        le_backgr.ReportProgress(101, new object[] { -2, "Сертификат CA уже добавлен" });
+                                        caCert = null;
+                                    }
+                                    if (userCert != null && pair.Value.fingerPrint == userCert.fingerPrint)
+                                    {
+                                        le_backgr.ReportProgress(101, new object[] { -2, "Сертификат "+ userCert.CN + " уже добавлен" });
+                                        cb_certs.SelectedItem = pair.Key;
+                                        userCert = null;
+                                    }
+                                }
+                                if (caCert != null)
+                                {
+                                    State.session.certs.Add(String.Format("*{0:d}***{2:s}***{1:s}", caCert.bits, caCert.CN, caCert.fingerPrint), caCert);
+                                    State.modified = formModState.MODIFIED;
+                                }
+
+                                if (userCert != null)
+                                {
+                                    State.selectCertName = String.Format("*{0:d}***{2:s}***{1:s}", userCert.bits, userCert.fingerPrint, (string)args[1]);
+                                    State.session.certs.Add(State.selectCertName, userCert);
+                                    State.modified = formModState.MODIFIED;
+                                }
+                                le_backgr.ReportProgress(101, new object[] { -2, "GET_CERT OK" });
+
+
+
+
+                            }
+                            else throw new Exception("Ошибка в ответе LE");
+                        }
+                        else
+                        {
+                            string met_3 = "new-cert";
+                            data_3.Add("resource", met_3);
+                            ans_3 = (byte[])LE.makeReq(met_3, data_3, le_backgr, true);
+                        
+                            if (ans_3 != null)
+                            {
+                                if (ans_3[0] != 0x30) throw new Exception("Ошибка в ASN1 данных");
+                                Libraries.Ber c = new Libraries.Ber(ans_3);
+                                if (c.childs.Count != 3) { throw new Exception("Не удалось обнаружить сертификат"); }
+                                certInfo cert = new certInfo(c);
+                                foreach (var pair in State.session.certs)
+                                {
+                                    if (pair.Value.fingerPrint == cert.fingerPrint)
+                                    {
+                                        cb_certs.SelectedItem = pair.Key;
+                                        le_backgr.ReportProgress(101, new object[] { -2, "GET_CERT ERROR" });
+                                        throw new Exception("Сертификат уже добавлен");
+                                    }
+                                }
+                                State.selectCertName = String.Format("*{0:d}***{2:s}***{1:s}", cert.bits, cert.fingerPrint, (string)args[1]);
+                                State.session.certs.Add(State.selectCertName, cert);
+                                State.modified = formModState.MODIFIED;
+                                le_backgr.ReportProgress(101, new object[] { -2, "GET_CERT OK" });
+                                e.Result = new object[] { 3 };
+                            }
+                            else
+                            {
+                                le_backgr.ReportProgress(101, new object[] { -2, "GET_CERT ERROR" });
+                                if (LE.ME.details != null) le_backgr.ReportProgress(101, new object[] { -1, LE.ME.details });
+                            }
                         }
                         break;
                 }
@@ -1450,13 +1527,20 @@ namespace shamkaLEupdater
 
         private void le_getCERT_Click(object sender, EventArgs e)
         {
+            int acme = radioACME2.Checked ? 0 : (radioACME1.Checked ? 1 : -1);
+            if (acme == -1)
+            {
+                MessageBox.Show("Необходимо указать версию ACME", "Ошибка");
+                return;
+            }
+
             le_gr.Enabled = false;
             if (State.le.csr == null) {
                 le_log.AppendText("CSR is NULL\r\n");
                 le_gr.Enabled = true;
                 return;
             }
-            le_backgr.RunWorkerAsync(new object[] { 3, le_domain.Text });
+            le_backgr.RunWorkerAsync(new object[] { 3, le_domain.Text, acme });
         }
 
         private void button1_Click(object sender, EventArgs e)
