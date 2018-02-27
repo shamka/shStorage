@@ -31,7 +31,11 @@ namespace shamkaLEupdater
         public static readonly string pdf = "https://letsencrypt.org/documents/LE-SA-v1.1.1-August-1-2016.pdf";
         public static readonly string pdf2 = "https://letsencrypt.org/documents/LE-SA-v1.2-November-15-2017.pdf";
         public static readonly string acme1 = "https://acme-v01.api.letsencrypt.org/directory";
-        public static readonly string acme2 = "https://acme-staging-v02.api.letsencrypt.org/directory";
+        public static readonly string acme2 = "https://acme-v02.api.letsencrypt.org/directory";
+
+        private static string nonce_reply = "";
+        private static JObject SAPI=null;
+
         public static Dictionary<string, string> acme1to2;
         private byte[] _csr;
         private keyInfo _key;
@@ -106,15 +110,26 @@ namespace shamkaLEupdater
                 worker.ReportProgress(101, new object[] { -3, "CANCEL" });
                 return null;
             }
-            JObject API = (JObject)GET(acme2 + "?cachebuster=" + utils.getHex(MD5.Create().ComputeHash(BitConverter.GetBytes(DateTime.UtcNow.ToBinary()))), api_serv, false);
-            string url = (API[method] != null) ? API[method].ToObject<string>() : method;
+            if (SAPI == null)
+            {
+                SAPI = (JObject)GET(acme2 + "?cachebuster=" + utils.getHex(MD5.Create().ComputeHash(BitConverter.GetBytes(DateTime.UtcNow.ToBinary()))), api_serv, false);
+            }
+            string url = (SAPI[method] != null) ? SAPI[method].ToObject<string>() : method;
+            if (nonce_reply == "" && api_serv.ContainsKey("r") && api_serv["r"] != "") nonce_reply = api_serv["r"];
 
+            if (nonce_reply == "") {
+                if(SAPI["newNonce"]==null) throw new Exception("Сервер: No Nonce");
+                api_serv.Clear();
+                GET(SAPI["newNonce"].ToObject<string>(), api_serv, false);
+                if (nonce_reply == "" && api_serv.ContainsKey("r") && api_serv["r"] != "") nonce_reply = api_serv["r"];
+            }
+            if (nonce_reply == "") throw new Exception("Сервер: No Nonce in nonce");
 
             if (worker != null) worker.ReportProgress(101, new object[] { -3, "OK\r\ncalc protect.." });
             string protect = Convert.ToBase64String(Encoding.UTF8.GetBytes((method== "revokeCert" || method== "newAccount") ?
 
-                (JWK_HEADERPLACE_PART1+ api_serv["r"]+"\", \"url\":\""+ url+ JWK_HEADERPLACE_PART2+ ",\"jwk\":"+ me.json_jwk_raw+"}") :
-                (JWK_HEADERPLACE_PART1 + api_serv["r"] + "\", \"url\":\"" + url + JWK_HEADERPLACE_PART2 + ",\"kid\":\"" + me.profLocation + "\"}")
+                (JWK_HEADERPLACE_PART1+ nonce_reply + "\", \"url\":\""+ url+ JWK_HEADERPLACE_PART2+ ",\"jwk\":"+ me.json_jwk_raw+"}") :
+                (JWK_HEADERPLACE_PART1 + nonce_reply + "\", \"url\":\"" + url + JWK_HEADERPLACE_PART2 + ",\"kid\":\"" + me.profLocation + "\"}")
 
                 )).TrimEnd('=').Replace('+', '-').Replace('/', '_');
             if (worker != null) worker.ReportProgress(101, new object[] { -3, "OK\r\ncalc payload.." });
@@ -132,11 +147,20 @@ namespace shamkaLEupdater
                 worker.ReportProgress(101, new object[] { -3, "CANCEL" });
                 return null;
             }
+            api_serv.Clear();
+            nonce_reply = "";
             if (isRaw)
             {
-                return POST(url, json, true);
+                try
+                {
+                    return POST(url, json, true, api_serv);
+                }
+                finally {
+                    if (nonce_reply == "" && api_serv.ContainsKey("r") && api_serv["r"] != "") nonce_reply = api_serv["r"];
+                }
             }
-            API = (JObject)POST(url, json, false);
+            JObject API = (JObject)POST(url, json, false, api_serv);
+            if (nonce_reply == "" && api_serv.ContainsKey("r") && api_serv["r"] != "") nonce_reply = api_serv["r"];
             if (worker != null) worker.ReportProgress(101, new object[] { -2, "OK" });
             if (API == null)
             {
@@ -180,9 +204,9 @@ namespace shamkaLEupdater
                 return null;
             }
             if (isRaw) {
-                return POST(url, json, true);
+                return POST(url, json, true, null);
             }
-            API = (JObject)POST(url, json, false);
+            API = (JObject)POST(url, json, false, null);
             if (worker != null) worker.ReportProgress(101, new object[] { -2, "OK" });
             if (API == null && me.code == 409)
             {
@@ -191,7 +215,7 @@ namespace shamkaLEupdater
 
             return API;
         }
-        static public object POST(string url, object data, bool isRaw)
+        static public object POST(string url, object data, bool isRaw, Dictionary<string, string> serv_api)
         {
             me.lastLocation = null;
             me.code = 0;
@@ -217,6 +241,10 @@ namespace shamkaLEupdater
             try
             {
                 if (isRaw) {
+                    if (serv_api != null)
+                    {
+                        serv_api.Add("r", ((HttpWebResponse)request.GetResponse()).GetResponseHeader("Replay-Nonce"));
+                    }
                     using (Stream responseStream = request.GetResponse().GetResponseStream())
                     {
                         using (MemoryStream memoryStream = new MemoryStream())
@@ -239,6 +267,10 @@ namespace shamkaLEupdater
                 {
                     HttpWebResponse response = (HttpWebResponse)request.GetResponse();
                     me.code = (int)response.StatusCode;
+                    if (serv_api != null)
+                    {
+                        serv_api.Add("r", response.GetResponseHeader("Replay-Nonce"));
+                    }
                     me.lastLocation = response.GetResponseHeader("Location");
                     object raw = (new StreamReader(response.GetResponseStream()).ReadToEnd());
                     response.Close();

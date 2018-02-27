@@ -1187,6 +1187,7 @@ namespace shamkaLEupdater
                                         string servAns = (string)servAnswerToTest;
                                         if (servAns == "ok") {
                                             //OK add TXT record
+                                            Thread.Sleep(5000);
                                             JObject order3 = (JObject)LE.makeReq2(uriToTest, "{\"keyAuthorization\": \"" + keyauthorization + "\"}", le_backgr, false);
                                             if (order3 != null) {
                                                 if (order3.Value<int>("rt") == 400) {
